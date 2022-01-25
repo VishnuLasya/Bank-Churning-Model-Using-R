@@ -1,0 +1,488 @@
+---
+title: "Final_Project"
+author: "Team_10"
+date: "4/28/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+install.packages( "D:/Spring_2021/STAT515_Prof.ScottBruce/After final/miderm-final-projects/DMwR_0.4.1.tar.gz",repos=NULL, type="source" )
+library(DMwR) 
+```
+
+```{r}
+
+install.packages('corrr')
+library(corrr)
+install.packages('cowplot')
+library(cowplot)
+install.packages('cowplot')
+library(cowplot)
+library(randomForest)
+install.packages("ROCR")
+library(pROC)
+library(ROCR)
+install.packages("ROSE")
+library(ROSE)
+
+#to use smote technique we need to have DMwR package in our envirorment which not installing directly via unstall packages command
+#please follow the steps below
+# go to link https://cran.r-project.org/src/contrib/Archive/DMwR/ and download the latest possible version and give the local location in the below command
+
+
+```
+
+
+```{r}
+df <- read.csv("D:/Spring_2021/STAT 515_Prof.ScottBruce/Final/Churn_Modelling.csv")
+```
+
+
+
+```{r}
+
+head(df)
+
+```
+
+```{r}
+dim(df)
+```
+```{r}
+sapply(df, function(x) sum(is.na(x)))
+```
+```{r}
+df$Geography = as.factor(df$Geography)
+df$Gender = as.factor(df$Gender)
+df$Tenure = as.factor(df$Tenure)
+df$NumOfProducts = as.factor(df$NumOfProducts)
+df$HasCrCard = as.factor(df$HasCrCard)
+df$IsActiveMember = as.factor(df$IsActiveMember )
+df$Exited = as.factor(df$Exited)
+
+
+```
+
+
+```{r}
+ggplot(df,aes(x = Exited))+
+  geom_bar(fill = '#DF6589FF')+ ggtitle("Churned Vs Unchurned Customers")+  theme(plot.title = element_text(  size=20,hjust=0.5))+
+  geom_text(stat = 'count',aes(label = paste((..count..)*100/nrow(df),'%')),position = position_stack(vjust = 0.5))
+```
+```{r}
+library(dplyr)
+xdf = df[c('Age','CreditScore','Balance','EstimatedSalary')]
+par(mfrow=c(2,2))
+for (cols in colnames(xdf)) {
+  xdf %>% pull(cols) %>% hist(main = cols)
+}
+```
+```{r}
+cor(xdf)
+
+```
+```{r}
+library(cowplot)
+p1 = ggplot(df,aes(x=Age,fill=Exited, color=Exited))+
+  geom_histogram(alpha=0.3,bins=10)
+  
+p2 = ggplot(df,aes(x = Exited, y = Age, group = Exited,color=Exited))+
+  geom_boxplot()
+
+plot_grid(p1, p2,labels = "AUTO")
+```
+
+```{r}
+p3 = ggplot(df,aes(x=CreditScore,fill=Exited, color=Exited))+
+  geom_histogram(alpha=0.3,bins=10)
+p4 = ggplot(df,aes(x = Exited, y = CreditScore, group = Exited,color=Exited))+
+  geom_boxplot()
+plot_grid(p3, p4, labels = "AUTO")
+```
+```{r}
+p5 = ggplot(df,aes(x=Balance,fill=Exited, color=Exited))+
+  geom_histogram(alpha=0.3,bins=10)
+p6 = ggplot(df,aes(x = Exited, y = Balance, group = Exited,color=Exited))+
+  geom_boxplot()
+plot_grid(p3, p4, labels = "AUTO")
+```
+```{r}
+p7 = ggplot(df,aes(x=EstimatedSalary,fill=Exited, color=Exited))+
+  geom_histogram(alpha=0.3,bins=10)
+p8 = ggplot(df,aes(x = Exited, y = EstimatedSalary, group = Exited,color=Exited))+
+  geom_boxplot()
+plot_grid(p5, p6, labels = "AUTO")
+```
+
+```{r}
+xp1 = plot_grid(p1, p3,p5,p7)
+title <- ggdraw() + 
+  draw_label(
+    "Filled Bar Plot for all Numeric Variables",
+    fontface = 'bold',
+    x = 0,
+    hjust = -0.5
+  )
+plot_grid(
+  title, xp1,
+  ncol = 1,
+  # rel_heights values control vertical title margins
+  rel_heights = c(0.1, 1)
+)
+
+```
+
+```{r}
+xp2 = plot_grid(p2, p4,p6,p8)
+title <- ggdraw() + 
+  draw_label(
+    "Box Plots for all Numeric Variables",
+    fontface = 'bold',
+    x = 0,
+    hjust = -0.5
+  )
+plot_grid(
+  title, xp2,
+  ncol = 1,
+  # rel_heights values control vertical title margins
+  rel_heights = c(0.1, 1)
+)
+
+
+```
+
+```{r}
+ydf = df[c('Geography','Gender','Tenure','NumOfProducts','HasCrCard','IsActiveMember')]
+
+p11 = ggplot(df,aes(x=Geography))+
+  geom_bar(alpha=1,fill = '#DF6589FF')
+p12 = ggplot(df,aes(x=Gender))+
+  geom_bar(alpha=1,fill = '#DF6589FF')
+p7 = ggplot(df,aes(x=Tenure))+
+  geom_bar(alpha=1,fill = '#DF6589FF')
+p8 = ggplot(df,aes(x=NumOfProducts))+
+  geom_bar(alpha=1,fill = '#DF6589FF')
+p9 = ggplot(df,aes(x=HasCrCard))+
+  geom_bar(alpha=1,fill = '#DF6589FF')
+p10 = ggplot(df,aes(x=IsActiveMember))+
+  geom_bar(alpha=1,fill = '#DF6589FF')
+
+
+xp0 = plot_grid(p7, p8,p9,p10,p11,p12)
+
+title <- ggdraw() + 
+  draw_label(
+    "Distribution of Categorical Variables",
+    fontface = 'bold',
+    x = 0,
+    hjust = -0.5
+  )
+plot_grid(
+  title, xp0,
+  ncol = 1,
+  # rel_heights values control vertical title margins
+  rel_heights = c(0.1, 1)
+)
+```
+
+```{r}
+
+p13 = ggplot(df,aes(x=Geography,fill=Exited))+
+  geom_bar(position="dodge")
+p13
+
+p14 = ggplot(df,aes(x=Gender,fill=Exited))+
+  geom_bar(position="dodge")
+p14
+
+p15 = ggplot(df,aes(x=HasCrCard,fill=Exited))+
+  geom_bar(position="dodge")
+p15
+
+p16 = ggplot(df,aes(x=IsActiveMember,fill=Exited))+
+  geom_bar(position="dodge")
+p16
+
+
+```
+```{r}
+xp3 = plot_grid(p13, p14,p16,p15)
+title <- ggdraw() + 
+  draw_label(
+    "Comparision of Categorical Variables Among Churned/Unchurned",
+    fontface = 'bold',
+    x = 0,
+    hjust = 0
+  )
+plot_grid(
+  title, xp3,
+  ncol = 1,
+  # rel_heights values control vertical title margins
+  rel_heights = c(0.1, 1)
+)
+```
+
+
+```{r}
+
+Chi_sq = vector() 
+P_val = vector()
+for (i in 1:dim(df)[2]) {
+  Chi_sq = c(Chi_sq,chisq.test(df[i],df$Exited)$statistic)
+  P_val = c(P_val,chisq.test(df[i],df$Exited)$p.value)
+  
+}
+tdf <- data.frame(colnames(df),Chi_sq,P_val)
+tdf
+colnames(df)
+```
+```{r}
+
+fdf = select(df,-c(RowNumber, CustomerId, Surname,Tenure,HasCrCard,EstimatedSalary,CreditScore))
+
+```
+
+```{r}
+n = nrow(fdf)
+trainIndex = sample(1:n, size = round(0.7*n), replace=FALSE)
+train = fdf[trainIndex ,]
+test = fdf[-trainIndex ,]
+```
+
+```{r}
+
+logm <- glm(Exited ~., data = train, family = binomial(link = 'logit'))
+summary(logm)
+prob <-  predict(logm, test, type = "response")
+predicted.logm.classes <- ifelse(prob > 0.5, "1", "0")
+cm1 <- table(actual = test$Exited, fitted = predicted.logm.classes)
+cm1
+accuracy1 <- (sum(diag(cm1))/sum(cm1))
+accuracy1
+
+#precision
+precision1 = cm1[1,1]/sum(cm1[1,1:2])
+
+# Recall: tp/(tp + fn):
+recall1 = cm1[1,1]/sum(cm1[1:2,1])
+
+# F-Score: 2 * precision * recall /(precision + recall):
+f1 = 2 * precision1 * recall1 / (precision1 + recall1)
+
+precision1
+recall1
+f1
+cm1[1,1]
+
+table(Autual_fitted = c(0,1),
+      '0'=c(cm1[1,1],cm1[1,2]),
+      '1'=c(cm1[2,1],cm1[2.2]))
+
+```
+```{r}
+plot(logm)
+```
+```{r}
+library(pROC)
+rocobj <- roc(test$Exited, prob)
+
+
+#create ROC plot
+ggroc(rocobj, colour = 'steelblue', size = 2) +
+  ggtitle(paste0('ROC Curve for Unbalanced dataset using Logistic Regression Classifier'))
+
+```
+
+
+```{r}
+library(randomForest)
+rf_classifier = randomForest(Exited ~ ., data=train, ntree=100, mtry=2, importance=TRUE)
+rf_classifier
+prob2 = c()
+prob2 <-  predict(rf_classifier, test, type = "response")
+cm2 <- table(actual = test$Exited, fitted = prob2)
+cm2
+accuracy2 <- (sum(diag(cm2))/sum(cm2))
+accuracy2
+#precision
+precision2 = cm2[1,1]/sum(cm2[1,1:2])
+
+# Recall: tp/(tp + fn):
+recall2 = cm2[1,1]/sum(cm2[1:2,1])
+
+# F-Score: 2 * precision * recall /(precision + recall):
+f2 = 2 * precision2 * recall2 / (precision2 + recall2)
+
+precision2
+recall2
+f2
+plot(rf_classifier)
+
+p = vector()
+for (i in 1:length(prob2)){
+p = c(p,prob2[[i]])
+}
+table(prob2)
+
+p[p==1] = 0
+p[p==2] = 1
+p
+table(p)
+table(test$Exited)
+
+
+```
+
+```{r}
+
+rocobj <- roc(test$Exited, p)
+
+
+#create ROC plot
+ggroc(rocobj, colour = 'steelblue', size = 2) +
+  ggtitle(paste0('ROC Curve for Unbalanced dataset using Random forest Classifier'))
+
+prob2[1][1]
+```
+
+```{r}
+imbalanced <- data.frame(Model.Name = c('Logistic Regression', 'Random Forest Classifier'),
+  precision = c(precision1, precision2),
+                 recall= c(recall1,recall2),
+                  F_Measure = c(f1,f2),
+                 accuracy= c(accuracy1,accuracy2))
+
+imbalanced
+```
+```{r}
+data_count <- data.frame(Dataset = c('Unbalanced','Balanced'),
+  Count_Unchurned = c(table(fdf$Exited)[[1]], table(fdf1$Exited)[[1]]),
+                 Count_Churned= c(table(fdf$Exited)[[2]],table(fdf1$Exited)[[2]]))
+
+data_count
+
+```
+
+
+
+```{r}
+library(DMwR)
+
+fdf1 <- SMOTE(Exited~.,fdf,perc.over=300,perc.under=130)
+table(fdf1$Exited)
+table(fdf$Exited)
+
+
+
+```
+```{r}
+
+n1 = nrow(fdf1)
+trainIndex1 = sample(1:n1, size = round(0.7*n), replace=FALSE)
+train1 = fdf1[trainIndex1 ,]
+test1 = fdf1[-trainIndex1 ,]
+```
+
+
+
+```{r}
+logm <- glm(Exited ~., data = train1, family = binomial(link = 'logit'))
+summary(logm)
+prob3 <-  predict(logm, test1, type = "response")
+predicted.logm.classes1 <- ifelse(prob3 > 0.5, "1", "0")
+cm3 <- table(actual = test1$Exited, fitted = predicted.logm.classes1)
+cm3
+accuracy3 <- (sum(diag(cm3))/sum(cm3))
+accuracy3
+precision3 = cm3[1,1]/sum(cm3[1,1:2])
+
+# Recall: tp/(tp + fn):
+recall3 = cm3[1,1]/sum(cm3[1:2,1])
+
+# F-Score: 2 * precision * recall /(precision + recall):
+f3 = 2 * precision3 * recall3 / (precision3 + recall3)
+
+precision3
+recall3
+f3
+
+```
+```{r}
+p3 = vector()
+for (i in 1:length(prob3)){
+p3 = c(p3,prob3[[i]])
+}
+table(prob3)
+
+p3[p3==1] = 0
+p3[p3==2] = 1
+p3
+
+rocobj <- roc(test1$Exited, p3)
+
+
+#create ROC plot
+ggroc(rocobj, colour = 'steelblue', size = 2) +
+  ggtitle(paste0('ROC Curve for Balanced dataset using Logistic Regression Classifier'))
+```
+
+
+```{r}
+rf_classifier1 = randomForest(Exited ~ ., data=train1, ntree=100, mtry=2, importance=TRUE)
+rf_classifier1
+prob4 <-  predict(rf_classifier1, test1, type = "response")
+
+cm4 <- table(actual = test1$Exited, fitted = prob4)
+cm4
+
+
+accuracy4 <- (sum(diag(cm4))/sum(cm4))
+accuracy4
+
+#precision
+precision4 = cm4[1,1]/sum(cm4[1,1:2])
+
+# Recall: tp/(tp + fn):
+recall4 = cm4[1,1]/sum(cm4[1:2,1])
+
+# F-Score: 2 * precision * recall /(precision + recall):
+f4 = 2 * precision4 * recall4 / (precision4 + recall4)
+
+precision4
+recall4
+f4
+plot(rf_classifier1)
+```
+```{r}
+balanced <- data.frame(Model.Name = c('Logistic Regression', 'Random Forest Classifier'),
+  precision = c(precision3, precision4),
+                 recall= c(recall3,recall4),
+                  F_Measure = c(f3,f4),
+                 accuracy= c(accuracy3,accuracy4))
+
+balanced
+```
+```{r}
+p1 = vector()
+for (i in 1:length(prob4)){
+p1 = c(p1,prob4[[i]])
+}
+table(prob4)
+
+p1[p1==1] = 0
+p1[p1==2] = 1
+p1
+
+rocobj <- roc(test1$Exited, p1)
+
+
+#create ROC plot
+ggroc(rocobj, colour = 'steelblue', size = 2) +
+  ggtitle(paste0('ROC Curve for Balanced dataset using Random forest Classifier'))
+
+```
+
